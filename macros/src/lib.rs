@@ -105,7 +105,7 @@ pub fn ffi_impl(attr: TokenStream, item: TokenStream) -> TokenStream {
         quote! {
             #[unsafe(no_mangle)]
             pub unsafe extern "C" fn #get_type_fn_name() -> ::glib::ffi::GType {
-                ::glib::translate::IntoGlib::into_glib(<#self_type as ::glib::prelude::StaticType>::static_type())
+                ::glib::translate::IntoGlib::into_glib(<super::#self_type as ::glib::prelude::StaticType>::static_type())
             }
         }
     };
@@ -113,11 +113,15 @@ pub fn ffi_impl(attr: TokenStream, item: TokenStream) -> TokenStream {
     let expanded = quote! {
         #cleaned_input
 
-        #type_alias
+        pub mod ffi {
+            use super::*;
 
-        #get_type_fn
+            #type_alias
 
-        #(#ffi_functions)*
+            #get_type_fn
+
+            #(#ffi_functions)*
+        }
     };
 
     TokenStream::from(expanded)
@@ -140,12 +144,12 @@ fn generate_ffi_from_constructor(
         Err(e) => return e.to_compile_error(),
     };
 
-    let ok_type = quote! { #self_type };
+    let ok_type = quote! { super::#self_type };
     let components = build_ffi_params(&params, &ok_type, c_type_name, c_return_type.as_ref(), true);
 
     let fn_name = &ctx.fn_name;
     let param_call_args = &components.param_call_args;
-    let body = quote! { #self_type::#fn_name(#param_call_args) };
+    let body = quote! { super::#self_type::#fn_name(#param_call_args) };
 
     if ctx.is_async {
         let sync_call_args = components.sync_call_args.clone();
@@ -205,12 +209,14 @@ fn generate_ffi_from_method(
 
     // Determine self parameter type and conversion based on ffi_type
     let self_param_ident = syn::Ident::new("self_param", proc_macro2::Span::call_site());
+    let self_type_in_ffi = syn::parse_quote! { super::#self_type };
     let (self_ffi_type, self_conversion) = if let Some(c_type) = ffi_type.self_c_type() {
         let transfer = ffi_type.self_transfer_mode();
-        let conversion = transfer.convert_from(&self_param_ident, self_type);
+        let conversion = transfer.convert_from(&self_param_ident, &self_type_in_ffi);
         (quote! { #c_type }, conversion)
     } else {
-        let conversion = types::TransferMode::None.convert_from(&self_param_ident, self_type);
+        let conversion =
+            types::TransferMode::None.convert_from(&self_param_ident, &self_type_in_ffi);
         (quote! { *mut #c_type_name }, conversion)
     };
 

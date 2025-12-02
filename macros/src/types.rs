@@ -122,23 +122,21 @@ impl Parse for CTypeOverride {
 }
 
 pub(crate) struct FfiImplArgs {
+    pub(crate) c_type_name: Option<syn::LitStr>,
     pub(crate) prefix: syn::LitStr,
     pub(crate) ty: FfiType,
 }
 
 impl FfiImplArgs {
     pub(crate) fn get_c_type_name(&self, rust_type: &syn::Type) -> syn::Result<String> {
+        if let Some(ref name) = self.c_type_name {
+            return Ok(name.value());
+        }
+
         if let syn::Type::Path(type_path) = rust_type {
             if let Some(last_segment) = type_path.path.segments.last() {
                 let type_name = last_segment.ident.to_string();
-                return Ok(match self.ty {
-                    FfiType::Object => format!("{}Ptr", type_name),
-                    FfiType::Boxed => type_name, // Boxed uses the type name directly
-                    FfiType::Shared => format!("{}Ptr", type_name), /* Shared needs Ptr suffix
-                                                                      * (points to inner data) */
-                    FfiType::Enum => format!("{}Enum", type_name),
-                    FfiType::Flags => format!("{}Flags", type_name),
-                });
+                return Ok(type_name);
             }
         }
 
@@ -151,6 +149,7 @@ impl FfiImplArgs {
 
 impl Parse for FfiImplArgs {
     fn parse(input: ParseStream) -> syn::Result<Self> {
+        let mut c_type_name: Option<syn::LitStr> = None;
         let mut prefix: Option<syn::LitStr> = None;
         let mut ty: Option<FfiType> = None;
 
@@ -159,6 +158,10 @@ impl Parse for FfiImplArgs {
             input.parse::<Token![=]>()?;
 
             match key.to_string().as_str() {
+                "c_type_name" => {
+                    let value: syn::LitStr = input.parse()?;
+                    c_type_name = Some(value);
+                }
                 "prefix" => {
                     let value: syn::LitStr = input.parse()?;
                     prefix = Some(value);
@@ -199,6 +202,10 @@ impl Parse for FfiImplArgs {
         // Default ty to object if not specified
         let ty = ty.unwrap_or(FfiType::Object);
 
-        Ok(FfiImplArgs { prefix, ty })
+        Ok(FfiImplArgs {
+            c_type_name,
+            prefix,
+            ty,
+        })
     }
 }

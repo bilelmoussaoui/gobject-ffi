@@ -26,9 +26,7 @@ impl Point {
     }
 }
 
-pub type PointPtr = PointData;
-
-#[ffi_impl(prefix = "my_point", ty="shared")]
+#[ffi_impl(c_type_name = "PointData", prefix = "my_point", ty="shared")]
 impl Point {
     fn create(x: i32, y: i32) -> Point {
         Point::new(x, y)
@@ -64,7 +62,7 @@ impl Point {
     }
 
     // Test fallible sync method
-    #[c_return_type(*mut PointPtr, transfer=none)]
+    #[c_return_type(*mut PointData, transfer=none)]
     fn translate(&self, dx: i32, dy: i32) -> Result<Point, glib::Error> {
         let new_x = self.0.x.checked_add(dx)
             .ok_or_else(|| glib::Error::new(glib::FileError::Failed, "X overflow"))?;

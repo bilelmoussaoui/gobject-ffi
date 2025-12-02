@@ -196,8 +196,7 @@ impl Parse for FfiImplArgs {
             }
         }
 
-        let prefix = prefix
-            .ok_or_else(|| syn::Error::new(input.span(), "missing required `prefix` parameter"))?;
+        let prefix = prefix.unwrap_or_else(|| syn::LitStr::new("", proc_macro2::Span::call_site()));
 
         // Default ty to object if not specified
         let ty = ty.unwrap_or(FfiType::Object);

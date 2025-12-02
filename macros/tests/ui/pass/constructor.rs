@@ -20,7 +20,7 @@ glib::wrapper! {
     pub struct Widget(ObjectSubclass<imp::Widget>);
 }
 
-#[ffi_impl(prefix = "widget")]
+#[ffi_impl]
 impl Widget {
     // Sync constructors
     fn new() -> Widget {

@@ -27,7 +27,7 @@ glib::wrapper! {
     pub struct TestObject(ObjectSubclass<imp::TestObject>);
 }
 
-#[ffi_impl(prefix = "test_object")]
+#[ffi_impl]
 impl TestObject {
     // primitive transfer for enum
     fn set_mode(&self, #[c_type(i32, transfer=primitive)] mode: Mode) {

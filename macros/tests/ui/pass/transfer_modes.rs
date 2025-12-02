@@ -27,7 +27,7 @@ glib::wrapper! {
     pub struct TestObject(ObjectSubclass<imp::TestObject>);
 }
 
-#[ffi_impl(prefix = "test_object")]
+#[ffi_impl]
 impl TestObject {
     // Test transfer=primitive for enums
     fn check_status_primitive(

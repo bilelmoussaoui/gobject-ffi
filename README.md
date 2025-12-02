@@ -34,7 +34,7 @@ glib::wrapper! {
 }
 
 // my_calculator_get_type is automatically generated
-#[ffi_impl(prefix = "my_calculator")]
+#[ffi_impl(prefix = "my")]
 impl Calculator {
     // Generates my_calculator_new
     fn new() -> Calculator {

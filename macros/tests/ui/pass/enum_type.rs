@@ -11,7 +11,7 @@ pub enum Status {
     Failed,
 }
 
-#[ffi_impl(prefix = "my_status", ty = "enum")]
+#[ffi_impl(prefix = "my", ty = "enum")]
 impl Status {
     #[c_return_type(i32, transfer=primitive)]
     fn idle() -> Status {

@@ -20,7 +20,7 @@ glib::wrapper! {
     pub struct Calculator(ObjectSubclass<imp::Calculator>);
 }
 
-#[ffi_impl(prefix = "calculator")]
+#[ffi_impl]
 impl Calculator {
     fn add(&self, a: i32, b: i32) -> i32 {
         a + b

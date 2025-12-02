@@ -20,7 +20,7 @@ glib::wrapper! {
     pub struct MutHandler(ObjectSubclass<imp::MutHandler>);
 }
 
-#[ffi_impl(prefix = "mut_handler")]
+#[ffi_impl]
 impl MutHandler {
     // Sync mutable references
     fn increment(&self, value: &mut i32) {

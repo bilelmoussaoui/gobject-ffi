@@ -20,7 +20,7 @@ glib::wrapper! {
     pub struct Calculator(ObjectSubclass<imp::Calculator>);
 }
 
-#[ffi_impl(prefix = "calculator")]
+#[ffi_impl]
 impl Calculator {
     // Many parameters
     fn compute(

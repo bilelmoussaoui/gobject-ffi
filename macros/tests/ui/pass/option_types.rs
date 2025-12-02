@@ -20,7 +20,7 @@ glib::wrapper! {
     pub struct OptionHandler(ObjectSubclass<imp::OptionHandler>);
 }
 
-#[ffi_impl(prefix = "option_handler")]
+#[ffi_impl]
 impl OptionHandler {
     // Option parameters
     fn process_optional_string(&self, text: Option<String>) -> bool {

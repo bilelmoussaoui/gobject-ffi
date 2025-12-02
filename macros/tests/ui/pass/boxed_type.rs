@@ -16,7 +16,7 @@ impl Rectangle {
     }
 }
 
-#[ffi_impl(prefix = "my_rectangle", ty="boxed")]
+#[ffi_impl(prefix = "my", ty="boxed")]
 impl Rectangle {
     fn create(x: i32, y: i32, width: i32, height: i32) -> Rectangle {
         Rectangle::new(x, y, width, height)

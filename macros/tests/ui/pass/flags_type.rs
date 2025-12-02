@@ -9,7 +9,7 @@ pub enum Permissions {
     DELETE = 0b1000,
 }
 
-#[ffi_impl(prefix = "my_permissions", ty = "flags")]
+#[ffi_impl(prefix = "my", ty = "flags")]
 impl Permissions {
     #[c_return_type(u32, transfer=primitive)]
     fn none() -> Permissions {

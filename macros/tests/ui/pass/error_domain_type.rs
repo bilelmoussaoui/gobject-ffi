@@ -12,7 +12,7 @@ pub enum MyError {
     PermissionDenied,
 }
 
-#[ffi_impl(prefix = "my_error", ty = "enum")]
+#[ffi_impl(ty = "enum")]
 impl MyError {
     #[c_return_type(u32, transfer=primitive)]
     fn quark() -> Quark {

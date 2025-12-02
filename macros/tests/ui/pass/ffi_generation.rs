@@ -43,7 +43,7 @@ glib::wrapper! {
     pub struct TestObject(ObjectSubclass<imp::TestObject>);
 }
 
-#[ffi_impl(prefix = "test_object")]
+#[ffi_impl]
 impl TestObject {
         // Bool variants
         async fn async_fallible_bool(&self) -> Result<bool, glib::Error> {

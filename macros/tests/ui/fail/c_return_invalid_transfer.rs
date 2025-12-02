@@ -20,7 +20,7 @@ glib::wrapper! {
     pub struct TestObject(ObjectSubclass<imp::TestObject>);
 }
 
-#[ffi_impl(prefix = "test_object")]
+#[ffi_impl]
 impl TestObject {
     // Invalid transfer mode in return type
     #[c_return_type(i32, transfer=borrowed)]

@@ -20,7 +20,7 @@ glib::wrapper! {
     pub struct AsyncService(ObjectSubclass<imp::AsyncService>);
 }
 
-#[ffi_impl(prefix = "async_service")]
+#[ffi_impl]
 impl AsyncService {
     // Async infallible
     async fn fetch_data(&self) -> String {

@@ -1,0 +1,18 @@
+[workspace]
+members = ["macros", "ffi"]
+resolver = "2"
+
+[workspace.package]
+version = "0.1.0"
+edition = "2024"
+rust-version = "1.85"
+authors = ["Bilal Elmoussaoui <belmouss@redhat.com>"]
+license = "MIT"
+repository = "https://github.com/belmoussaoui/gobject-ffi"
+homepage = "https://github.com/belmoussaoui/gobject-ffi"
+keywords = ["ffi", "gobject", "glib", "introspection"]
+categories = ["api-bindings", "development-tools::ffi"]
+exclude = [".git*", ".github/"]
+
+[workspace.dependencies]
+futures-util = "0.3"

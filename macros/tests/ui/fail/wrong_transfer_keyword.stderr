@@ -1,0 +1,5 @@
+error: expected `transfer`
+  --> tests/ui/fail/wrong_transfer_keyword.rs:28:23
+   |
+28 |         #[c_type(i32, mode=primitive)] value: i32,
+   |                       ^^^^

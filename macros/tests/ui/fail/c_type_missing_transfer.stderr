@@ -1,0 +1,5 @@
+error: missing required `transfer` parameter (expected: `, transfer=primitive|none|full`)
+  --> tests/ui/fail/c_type_missing_transfer.rs:28:21
+   |
+28 |         #[c_type(i32)] value: i32,
+   |                     ^

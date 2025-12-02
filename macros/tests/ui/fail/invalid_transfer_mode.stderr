@@ -1,0 +1,5 @@
+error: expected `primitive`, `none`, or `full`
+  --> tests/ui/fail/invalid_transfer_mode.rs:28:32
+   |
+28 |         #[c_type(i32, transfer=invalid)] value: i32,
+   |                                ^^^^^^^

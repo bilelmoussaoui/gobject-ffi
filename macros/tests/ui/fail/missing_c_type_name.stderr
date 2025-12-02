@@ -1,0 +1,7 @@
+error: missing required `prefix` parameter
+  --> tests/ui/fail/missing_c_type_name.rs:24:1
+   |
+24 | #[ffi_impl]
+   | ^^^^^^^^^^^
+   |
+   = note: this error originates in the attribute macro `ffi_impl` (in Nightly builds, run with -Z macro-backtrace for more info)

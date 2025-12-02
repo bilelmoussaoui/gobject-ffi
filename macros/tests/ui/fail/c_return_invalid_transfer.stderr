@@ -1,0 +1,5 @@
+error: expected `primitive`, `none`, or `full`
+  --> tests/ui/fail/c_return_invalid_transfer.rs:26:35
+   |
+26 |     #[c_return_type(i32, transfer=borrowed)]
+   |                                   ^^^^^^^^

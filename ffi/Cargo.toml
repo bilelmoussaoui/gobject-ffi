@@ -1,0 +1,19 @@
+[package]
+name = "gobject-ffi"
+version.workspace = true
+edition.workspace = true
+authors.workspace = true
+keywords.workspace = true
+categories.workspace = true
+repository.workspace = true
+homepage.workspace = true
+license.workspace = true
+rust-version.workspace = true
+exclude.workspace = true
+description = "FFI runtime helpers and trait implementations for GObject bindings"
+
+[dependencies]
+glib = "0.21"
+gio = "0.21"
+gobject-macros = { path = "../macros", version = "0.1.0" }
+futures-util = "0.3"

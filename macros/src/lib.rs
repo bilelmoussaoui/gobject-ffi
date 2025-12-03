@@ -4,7 +4,7 @@ mod method;
 mod types;
 mod utils;
 
-use heck::ToSnakeCase;
+use heck::{ToPascalCase, ToSnakeCase};
 use proc_macro::TokenStream;
 use quote::quote;
 use syn::{FnArg, ImplItem, ItemImpl, Type, parse_macro_input};
@@ -28,9 +28,17 @@ fn generate_type_alias(
                     pub type #c_type_name = <imp::#type_name as ::glib::subclass::prelude::ObjectSubclass>::Instance;
                 },
                 types::FfiType::Shared => quote! {
-                    pub type #c_type_name = <<super::#type_name as ::glib::subclass::shared::SharedType>::RefCountedType as ::glib::subclass::shared::RefCounted>::InnerType;
+                    pub type #c_type_name = *mut <<super::#type_name as ::glib::subclass::shared::SharedType>::RefCountedType as ::glib::subclass::shared::RefCounted>::InnerType;
                 },
-                _ => quote! {},
+                types::FfiType::Boxed => quote! {
+                    pub type #c_type_name = <super::#type_name as ::glib::translate::GlibPtrDefault>::GlibType;
+                },
+                types::FfiType::Enum => quote! {
+                    pub type #c_type_name = super::#type_name;
+                },
+                types::FfiType::Flags => quote! {
+                    pub type #c_type_name = super::#type_name;
+                },
             };
         }
     }
@@ -57,11 +65,6 @@ pub fn ffi_impl(attr: TokenStream, item: TokenStream) -> TokenStream {
     let args = parse_macro_input!(attr as FfiImplArgs);
 
     let self_type = &input.self_ty;
-    let c_type_name_str = match args.get_c_type_name(self_type) {
-        Ok(name) => name,
-        Err(e) => return e.to_compile_error().into(),
-    };
-    let c_type_name = syn::Ident::new(&c_type_name_str, proc_macro2::Span::call_site());
 
     let type_name_lower = if let syn::Type::Path(type_path) = self_type.as_ref() {
         if let Some(last_segment) = type_path.path.segments.last() {
@@ -80,11 +83,20 @@ pub fn ffi_impl(attr: TokenStream, item: TokenStream) -> TokenStream {
             "Cannot extract type name from this type. Expected a path type (e.g., MyType, module::MyType)."
         ).to_compile_error().into();
     };
+
     let prefix = if args.prefix.value().is_empty() {
-        type_name_lower
+        type_name_lower.clone()
     } else {
         format!("{}_{}", args.prefix.value(), type_name_lower)
     };
+
+    let c_type_name_str = if let Some(ref explicit_name) = args.c_type_name {
+        explicit_name.value()
+    } else {
+        prefix.to_pascal_case()
+    };
+    let c_type_name = syn::Ident::new(&c_type_name_str, proc_macro2::Span::call_site());
+
     let ffi_type = args.ty;
 
     let mut ffi_functions = Vec::new();
@@ -139,19 +151,13 @@ pub fn ffi_impl(attr: TokenStream, item: TokenStream) -> TokenStream {
         header_content.push_str("G_BEGIN_DECLS\n\n");
 
         match ffi_type {
-            types::FfiType::Object => {
+            types::FfiType::Object | types::FfiType::Shared | types::FfiType::Boxed => {
                 header_content.push_str(&format!(
                     "typedef struct _{} {};\n\n",
                     c_type_name_str, c_type_name_str
                 ));
             }
-            types::FfiType::Shared => {
-                header_content.push_str(&format!(
-                    "typedef struct _{} {};\n\n",
-                    c_type_name_str, c_type_name_str
-                ));
-            }
-            _ => (),
+            types::FfiType::Enum | types::FfiType::Flags => {}
         }
         header_content.push_str(&format!("GType {}_get_type(void);\n\n", prefix));
 

@@ -52,4 +52,7 @@ impl Rectangle {
     }
 }
 
-fn main() {}
+fn main() {
+    #[allow(unused_imports)]
+    use ffi::MyRectangle;
+}

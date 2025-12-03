@@ -77,4 +77,7 @@ impl Status {
     }
 }
 
-fn main() {}
+fn main() {
+    #[allow(unused_imports)]
+    use ffi::MyStatus;
+}

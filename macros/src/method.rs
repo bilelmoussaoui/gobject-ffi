@@ -146,9 +146,12 @@ impl FfiReturn {
         } else if is_constructor
             && (ffi_type.is_gobject() || matches!(ffi_type, FfiType::Boxed | FfiType::Shared))
         {
-            // For constructors of GObject, Boxed, and Shared types, use pointer and
-            // transfer mode
-            (quote! { *mut #c_type_name }, TransferMode::Full)
+            let c_type = if ffi_type.is_gobject() {
+                quote! { *mut #c_type_name }
+            } else {
+                quote! { #c_type_name }
+            };
+            (c_type, TransferMode::Full)
         } else {
             // For methods returning basic types or other types, use FfiConvert
             let c_type = if let Some(inner_type) = crate::utils::extract_option_inner(&rust_type) {
@@ -388,7 +391,11 @@ impl FfiMethod {
             Some(quote! { #c_type })
         } else {
             let c_type_name = &self.c_type_name;
-            Some(quote! { *mut #c_type_name })
+            if self.ffi_type.is_gobject() {
+                Some(quote! { *mut #c_type_name })
+            } else {
+                Some(quote! { #c_type_name })
+            }
         }
     }
 
@@ -571,8 +578,10 @@ impl FfiMethod {
             // For enum/flags, use the primitive type; for others use pointer
             if let Some(self_c_ty) = ffi_type.self_c_type() {
                 quote! { _self: #self_c_ty, }
-            } else {
+            } else if ffi_type.is_gobject() {
                 quote! { _self: *mut #c_type_name, }
+            } else {
+                quote! { _self: #c_type_name, }
             }
         };
 

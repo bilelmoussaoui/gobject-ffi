@@ -135,26 +135,6 @@ pub(crate) struct FfiImplArgs {
     pub(crate) generate_header: Option<syn::LitStr>,
 }
 
-impl FfiImplArgs {
-    pub(crate) fn get_c_type_name(&self, rust_type: &syn::Type) -> syn::Result<String> {
-        if let Some(ref name) = self.c_type_name {
-            return Ok(name.value());
-        }
-
-        if let syn::Type::Path(type_path) = rust_type {
-            if let Some(last_segment) = type_path.path.segments.last() {
-                let type_name = last_segment.ident.to_string();
-                return Ok(type_name);
-            }
-        }
-
-        Err(syn::Error::new_spanned(
-            rust_type,
-            "Cannot auto-generate c_type_name for this type. Please specify it explicitly with `c_type_name = \"...\"`",
-        ))
-    }
-}
-
 impl Parse for FfiImplArgs {
     fn parse(input: ParseStream) -> syn::Result<Self> {
         let mut c_type_name: Option<syn::LitStr> = None;

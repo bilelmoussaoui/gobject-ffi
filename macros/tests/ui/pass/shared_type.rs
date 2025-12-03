@@ -74,5 +74,5 @@ impl Point {
 
 fn main() {
     #[allow(unused_imports)]
-    use ffi::Point;
+    use ffi::MyPoint;
 }

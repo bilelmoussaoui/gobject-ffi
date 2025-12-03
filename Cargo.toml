@@ -1,5 +1,5 @@
 [workspace]
-members = ["macros", "ffi"]
+members = ["macros", "ffi", "tests/c_integration"]
 resolver = "2"
 
 [workspace.package]

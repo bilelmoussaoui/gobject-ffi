@@ -1,1 +1,3 @@
 target/
+*.h
+tests/c_integration/test

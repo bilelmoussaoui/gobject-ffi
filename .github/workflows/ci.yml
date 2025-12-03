@@ -38,6 +38,11 @@ jobs:
       - name: Run tests
         run: cargo test --workspace --all-targets
 
+      - name: Run C integration tests
+        run: |
+          cd tests/c_integration
+          make
+
   clippy:
     name: Clippy
     runs-on: ubuntu-latest

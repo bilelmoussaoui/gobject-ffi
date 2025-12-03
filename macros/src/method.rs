@@ -128,6 +128,7 @@ struct FfiReturn {
     rust_type: Type,
     c_type: proc_macro2::TokenStream,
     transfer: TransferMode,
+    uses_ffi_convert: bool,
 }
 
 impl FfiReturn {
@@ -138,11 +139,13 @@ impl FfiReturn {
         c_type_name: &syn::Ident,
         is_constructor: bool,
     ) -> Self {
-        let (c_type, transfer) = if let Some(ref override_) = c_return_type_override {
+        let (c_type, transfer, uses_ffi_convert) = if let Some(ref override_) =
+            c_return_type_override
+        {
             let c = &override_.c_type;
-            (quote! { #c }, override_.transfer)
+            (quote! { #c }, override_.transfer, false)
         } else if crate::utils::is_unit_type(&rust_type) {
-            (quote! { () }, TransferMode::None)
+            (quote! { () }, TransferMode::None, false)
         } else if is_constructor
             && (ffi_type.is_gobject() || matches!(ffi_type, FfiType::Boxed | FfiType::Shared))
         {
@@ -151,7 +154,7 @@ impl FfiReturn {
             } else {
                 quote! { #c_type_name }
             };
-            (c_type, TransferMode::Full)
+            (c_type, TransferMode::Full, false)
         } else {
             // For methods returning basic types or other types, use FfiConvert
             let c_type = if let Some(inner_type) = crate::utils::extract_option_inner(&rust_type) {
@@ -159,13 +162,14 @@ impl FfiReturn {
             } else {
                 quote! { <#rust_type as ::gobject_ffi::FfiConvert>::CType }
             };
-            (c_type, TransferMode::Full)
+            (c_type, TransferMode::Full, true)
         };
 
         Self {
             rust_type,
             c_type,
             transfer,
+            uses_ffi_convert,
         }
     }
 
@@ -178,7 +182,7 @@ impl FfiReturn {
             return quote! { () };
         }
 
-        if self.uses_ffi_convert() {
+        if self.uses_ffi_convert {
             let rust_type = &self.rust_type;
             quote! { <#rust_type as ::gobject_ffi::FfiConvert>::to_c_owned(val) }
         } else {
@@ -191,17 +195,12 @@ impl FfiReturn {
             return quote! { () };
         }
 
-        if self.uses_ffi_convert() {
+        if self.uses_ffi_convert {
             let rust_type = &self.rust_type;
             quote! { <#rust_type as ::gobject_ffi::FfiConvert>::c_error_value() }
         } else {
             self.transfer.error_value()
         }
-    }
-
-    fn uses_ffi_convert(&self) -> bool {
-        // Check if c_type contains "FfiConvert" to determine if we're using the trait
-        self.c_type.to_string().contains("FfiConvert")
     }
 
     /// Generate C header return type string

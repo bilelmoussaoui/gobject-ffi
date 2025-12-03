@@ -168,7 +168,10 @@ pub fn ffi_impl(attr: TokenStream, item: TokenStream) -> TokenStream {
 
         header_content.push_str("G_END_DECLS\n");
 
-        if let Err(e) = std::fs::write(header_path.value(), header_content) {
+        let manifest_dir = std::env::var("CARGO_MANIFEST_DIR").unwrap_or_else(|_| ".".to_string());
+        let header_file_path = std::path::Path::new(&manifest_dir).join(header_path.value());
+
+        if let Err(e) = std::fs::write(&header_file_path, header_content) {
             return syn::Error::new_spanned(
                 header_path,
                 format!("Failed to write header file: {}", e),

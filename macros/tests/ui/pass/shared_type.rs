@@ -26,7 +26,7 @@ impl Point {
     }
 }
 
-#[ffi_impl(c_type_name = "PointData", prefix = "my", ty="shared")]
+#[ffi_impl(prefix = "my", ty="shared")]
 impl Point {
     fn create(x: i32, y: i32) -> Point {
         Point::new(x, y)

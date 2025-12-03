@@ -20,15 +20,17 @@ fn generate_type_alias(
     self_type: &Type,
     c_type_name: &syn::Ident,
 ) -> proc_macro2::TokenStream {
-    if !ffi_type.is_gobject() {
-        return quote! {};
-    }
-
     if let Type::Path(type_path) = self_type {
         if let Some(last_segment) = type_path.path.segments.last() {
             let type_name = &last_segment.ident;
-            return quote! {
-                pub type #c_type_name = <imp::#type_name as ::glib::subclass::prelude::ObjectSubclass>::Instance;
+            return match ffi_type {
+                types::FfiType::Object => quote! {
+                    pub type #c_type_name = <imp::#type_name as ::glib::subclass::prelude::ObjectSubclass>::Instance;
+                },
+                types::FfiType::Shared => quote! {
+                    pub type #c_type_name = <<super::#type_name as ::glib::subclass::shared::SharedType>::RefCountedType as ::glib::subclass::shared::RefCounted>::InnerType;
+                },
+                _ => quote! {},
             };
         }
     }
@@ -136,11 +138,20 @@ pub fn ffi_impl(attr: TokenStream, item: TokenStream) -> TokenStream {
         header_content.push_str("#include <glib-object.h>\n\n");
         header_content.push_str("G_BEGIN_DECLS\n\n");
 
-        if ffi_type.is_gobject() {
-            header_content.push_str(&format!(
-                "typedef struct _{} {};\n\n",
-                c_type_name_str, c_type_name_str
-            ));
+        match ffi_type {
+            types::FfiType::Object => {
+                header_content.push_str(&format!(
+                    "typedef struct _{} {};\n\n",
+                    c_type_name_str, c_type_name_str
+                ));
+            }
+            types::FfiType::Shared => {
+                header_content.push_str(&format!(
+                    "typedef struct _{} {};\n\n",
+                    c_type_name_str, c_type_name_str
+                ));
+            }
+            _ => (),
         }
         header_content.push_str(&format!("GType {}_get_type(void);\n\n", prefix));
 

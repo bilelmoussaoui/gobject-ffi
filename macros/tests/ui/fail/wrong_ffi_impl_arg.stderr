@@ -1,4 +1,4 @@
-error: expected `c_type_name`, `prefix`, or `ty`
+error: expected `c_type_name`, `prefix`, `ty`, or `generate_header`
   --> tests/ui/fail/wrong_ffi_impl_arg.rs:24:12
    |
 24 | #[ffi_impl(type_name = "TestObjectPtr")]

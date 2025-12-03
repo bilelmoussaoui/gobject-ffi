@@ -86,6 +86,7 @@ pub fn ffi_impl(attr: TokenStream, item: TokenStream) -> TokenStream {
     let ffi_type = args.ty;
 
     let mut ffi_functions = Vec::new();
+    let mut headers = Vec::new();
 
     for item in &input.items {
         if let ImplItem::Fn(method) = item {
@@ -112,6 +113,10 @@ pub fn ffi_impl(attr: TokenStream, item: TokenStream) -> TokenStream {
                 }
             };
 
+            if args.generate_header.is_some() {
+                headers.push(ffi_method.generate_header());
+            }
+
             let generated = if ffi_method.is_async {
                 ffi_method.generate_async()
             } else {
@@ -119,6 +124,40 @@ pub fn ffi_impl(attr: TokenStream, item: TokenStream) -> TokenStream {
             };
 
             ffi_functions.push(generated);
+        }
+    }
+
+    if let Some(header_path) = &args.generate_header {
+        let mut header_content = String::new();
+
+        header_content.push_str("#pragma once\n\n");
+        header_content.push_str("#include <glib.h>\n");
+        header_content.push_str("#include <gio/gio.h>\n");
+        header_content.push_str("#include <glib-object.h>\n\n");
+        header_content.push_str("G_BEGIN_DECLS\n\n");
+
+        if ffi_type.is_gobject() {
+            header_content.push_str(&format!(
+                "typedef struct _{} {};\n\n",
+                c_type_name_str, c_type_name_str
+            ));
+        }
+        header_content.push_str(&format!("GType {}_get_type(void);\n\n", prefix));
+
+        for header in &headers {
+            header_content.push_str(header);
+            header_content.push('\n');
+        }
+
+        header_content.push_str("G_END_DECLS\n");
+
+        if let Err(e) = std::fs::write(header_path.value(), header_content) {
+            return syn::Error::new_spanned(
+                header_path,
+                format!("Failed to write header file: {}", e),
+            )
+            .to_compile_error()
+            .into();
         }
     }
 

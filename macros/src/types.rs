@@ -76,6 +76,14 @@ impl TransferMode {
             TransferMode::None | TransferMode::Full => quote! { ::std::ptr::null_mut() },
         }
     }
+
+    pub(crate) fn to_gir_annotation(self) -> Option<&'static str> {
+        match self {
+            TransferMode::Primitive => None,
+            TransferMode::None => Some("transfer none"),
+            TransferMode::Full => Some("transfer full"),
+        }
+    }
 }
 
 pub(crate) struct CTypeOverride {
@@ -124,6 +132,7 @@ pub(crate) struct FfiImplArgs {
     pub(crate) c_type_name: Option<syn::LitStr>,
     pub(crate) prefix: syn::LitStr,
     pub(crate) ty: FfiType,
+    pub(crate) generate_header: Option<syn::LitStr>,
 }
 
 impl FfiImplArgs {
@@ -151,6 +160,7 @@ impl Parse for FfiImplArgs {
         let mut c_type_name: Option<syn::LitStr> = None;
         let mut prefix: Option<syn::LitStr> = None;
         let mut ty: Option<FfiType> = None;
+        let mut generate_header: Option<syn::LitStr> = None;
 
         while !input.is_empty() {
             let key: syn::Ident = input.parse()?;
@@ -181,10 +191,14 @@ impl Parse for FfiImplArgs {
                         }
                     });
                 }
+                "generate_header" => {
+                    let value: syn::LitStr = input.parse()?;
+                    generate_header = Some(value);
+                }
                 _ => {
                     return Err(syn::Error::new_spanned(
                         key,
-                        "expected `c_type_name`, `prefix`, or `ty`",
+                        "expected `c_type_name`, `prefix`, `ty`, or `generate_header`",
                     ));
                 }
             }
@@ -197,13 +211,13 @@ impl Parse for FfiImplArgs {
 
         let prefix = prefix.unwrap_or_else(|| syn::LitStr::new("", proc_macro2::Span::call_site()));
 
-        // Default ty to object if not specified
         let ty = ty.unwrap_or(FfiType::Object);
 
         Ok(FfiImplArgs {
             c_type_name,
             prefix,
             ty,
+            generate_header,
         })
     }
 }

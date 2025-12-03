@@ -109,3 +109,64 @@ pub(crate) fn check_fallibility(return_type: &syn::ReturnType) -> bool {
         false
     }
 }
+
+pub(crate) fn is_primitive_type(ty: &Type) -> bool {
+    if let Type::Path(type_path) = ty {
+        if let Some(segment) = type_path.path.segments.last() {
+            let type_name = segment.ident.to_string();
+            return matches!(
+                type_name.as_str(),
+                "bool"
+                    | "i8"
+                    | "i16"
+                    | "i32"
+                    | "i64"
+                    | "u8"
+                    | "u16"
+                    | "u32"
+                    | "u64"
+                    | "f32"
+                    | "f64"
+                    | "usize"
+                    | "isize"
+            );
+        }
+    }
+    false
+}
+
+pub(crate) fn rust_type_to_c_type_string(ty: &Type) -> String {
+    if let Some(inner) = extract_option_inner(ty) {
+        return rust_type_to_c_type_string(inner);
+    }
+
+    if let Some(inner) = extract_mut_ref_inner(ty) {
+        return format!("{}*", rust_type_to_c_type_string(inner));
+    }
+
+    if let Type::Path(type_path) = ty {
+        if let Some(segment) = type_path.path.segments.last() {
+            let type_name = segment.ident.to_string();
+            return match type_name.as_str() {
+                "String" | "str" => "gchar*".to_string(),
+                "bool" => "gboolean".to_string(),
+                "i8" => "gint8".to_string(),
+                "i16" => "gint16".to_string(),
+                "i32" => "gint32".to_string(),
+                "i64" => "gint64".to_string(),
+                "u8" => "guint8".to_string(),
+                "u16" => "guint16".to_string(),
+                "u32" => "guint32".to_string(),
+                "u64" => "guint64".to_string(),
+                "f32" => "gfloat".to_string(),
+                "f64" => "gdouble".to_string(),
+                "usize" => "gsize".to_string(),
+                "isize" => "gssize".to_string(),
+                // For custom types, assume it's a pointer
+                _ => format!("{}*", type_name),
+            };
+        }
+    }
+
+    "gpointer".to_string()
+}

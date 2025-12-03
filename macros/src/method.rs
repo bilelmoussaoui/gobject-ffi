@@ -84,6 +84,44 @@ impl FfiParam {
             }
         }
     }
+
+    fn to_header_param(&self) -> String {
+        let c_type = if let Some(ref override_) = self.c_type_override {
+            crate::utils::rust_type_to_c_type_string(&override_.c_type)
+        } else {
+            crate::utils::rust_type_to_c_type_string(&self.rust_type)
+        };
+
+        format!("{} {}", c_type, self.name)
+    }
+
+    fn to_gtk_doc_annotation(&self, _c_type_name: &str) -> String {
+        let mut annotations = Vec::new();
+
+        if crate::utils::extract_option_inner(&self.rust_type).is_some() {
+            annotations.push("nullable".to_string());
+        }
+
+        if crate::utils::is_mutable_reference(&self.rust_type) {
+            annotations.push("out".to_string());
+        }
+
+        if let Some(ref override_) = self.c_type_override {
+            if let Some(transfer) = override_.transfer.to_gir_annotation() {
+                annotations.push(transfer.to_string());
+            }
+        }
+
+        let annotation_str = if annotations.is_empty() {
+            String::new()
+        } else {
+            format!(" ({})", annotations.join(") ("))
+        };
+
+        let c_type_str = crate::utils::rust_type_to_c_type_string(&self.rust_type);
+
+        format!(" * @{}:{} {}", self.name, annotation_str, c_type_str)
+    }
 }
 
 struct FfiReturn {
@@ -161,6 +199,42 @@ impl FfiReturn {
     fn uses_ffi_convert(&self) -> bool {
         // Check if c_type contains "FfiConvert" to determine if we're using the trait
         self.c_type.to_string().contains("FfiConvert")
+    }
+
+    /// Generate C header return type string
+    fn to_header_type(&self) -> String {
+        if self.is_void() {
+            return "void".to_string();
+        }
+
+        crate::utils::rust_type_to_c_type_string(&self.rust_type)
+    }
+
+    /// Generate GtkDoc Returns annotation
+    fn to_gtk_doc_returns(&self) -> Option<String> {
+        if self.is_void() {
+            return None;
+        }
+
+        let mut annotations = Vec::new();
+
+        if !crate::utils::is_primitive_type(&self.rust_type) {
+            if let Some(transfer) = self.transfer.to_gir_annotation() {
+                annotations.push(transfer.to_string());
+            }
+        }
+
+        if crate::utils::extract_option_inner(&self.rust_type).is_some() {
+            annotations.push("nullable".to_string());
+        }
+
+        let annotation_str = if annotations.is_empty() {
+            String::new()
+        } else {
+            format!(" ({})", annotations.join(") ("))
+        };
+
+        Some(format!(" * Returns:{} the result", annotation_str))
     }
 }
 
@@ -690,6 +764,186 @@ impl FfiMethod {
                 let result = #callback_result_to_c;
                 unsafe { #finish_fn_name(#sync_self_param result #sync_error_arg) }
             }
+        }
+    }
+
+    pub(crate) fn generate_header(&self) -> String {
+        if self.is_async {
+            self.generate_async_header()
+        } else {
+            self.generate_sync_header()
+        }
+    }
+
+    fn generate_sync_header(&self) -> String {
+        let fn_name = &self.ffi_prefix;
+        let return_type = self.return_info.to_header_type();
+
+        let mut params = Vec::new();
+
+        if let Some(self_c_type) = self.generate_self_c_type_string() {
+            params.push(format!("{}* self", self_c_type));
+        }
+
+        for param in &self.params {
+            params.push(param.to_header_param());
+        }
+
+        if self.is_fallible {
+            params.push("GError** error".to_string());
+        }
+
+        let params_str = params.join(", ");
+
+        let mut doc = format!("/**\n * {}:\n", fn_name);
+
+        if !self.is_constructor() {
+            doc.push_str(&format!(" * @self: a #{}\n", self.c_type_name));
+        }
+
+        for param in &self.params {
+            doc.push_str(&format!(
+                "{}\n",
+                param.to_gtk_doc_annotation(&self.c_type_name.to_string())
+            ));
+        }
+
+        if self.is_fallible {
+            doc.push_str(" * @error: (out) (optional): return location for error\n");
+        }
+
+        doc.push_str(" *\n");
+
+        if let Some(returns) = self.return_info.to_gtk_doc_returns() {
+            doc.push_str(&format!("{}\n", returns));
+        }
+
+        doc.push_str(" */\n");
+        doc.push_str(&format!("{} {}({});\n", return_type, fn_name, params_str));
+
+        doc
+    }
+
+    fn generate_async_header(&self) -> String {
+        let function_names = self.async_names.as_ref().expect("async_names required");
+        let async_fn_name = &function_names.async_name;
+        let finish_fn_name = &function_names.finish_name;
+        let sync_fn_name = &function_names.sync_name;
+
+        let mut result = String::new();
+
+        let mut async_params = Vec::new();
+        if let Some(self_c_type) = self.generate_self_c_type_string() {
+            async_params.push(format!("{}* self", self_c_type));
+        }
+        for param in &self.params {
+            async_params.push(param.to_header_param());
+        }
+        async_params.push("GCancellable* cancellable".to_string());
+        async_params.push("GAsyncReadyCallback callback".to_string());
+        async_params.push("gpointer user_data".to_string());
+
+        let mut async_doc = format!("/**\n * {}:\n", async_fn_name);
+        if !self.is_constructor() {
+            async_doc.push_str(&format!(" * @self: a #{}\n", self.c_type_name));
+        }
+        for param in &self.params {
+            async_doc.push_str(&format!(
+                "{}\n",
+                param.to_gtk_doc_annotation(&self.c_type_name.to_string())
+            ));
+        }
+        async_doc.push_str(" * @cancellable: (nullable): a #GCancellable\n");
+        async_doc.push_str(" * @callback: callback to call when complete\n");
+        async_doc.push_str(" * @user_data: user data for @callback\n");
+        async_doc.push_str(" */\n");
+        async_doc.push_str(&format!(
+            "void {}({});\n\n",
+            async_fn_name,
+            async_params.join(", ")
+        ));
+        result.push_str(&async_doc);
+
+        let return_type = self.return_info.to_header_type();
+        let mut finish_params = Vec::new();
+        if let Some(self_c_type) = self.generate_self_c_type_string() {
+            finish_params.push(format!("{}* self", self_c_type));
+        }
+        finish_params.push("GAsyncResult* result".to_string());
+        if self.is_fallible {
+            finish_params.push("GError** error".to_string());
+        }
+
+        let mut finish_doc = format!("/**\n * {}:\n", finish_fn_name);
+        if !self.is_constructor() {
+            finish_doc.push_str(&format!(" * @self: a #{}\n", self.c_type_name));
+        }
+        finish_doc.push_str(" * @result: a #GAsyncResult\n");
+        if self.is_fallible {
+            finish_doc.push_str(" * @error: (out) (optional): return location for error\n");
+        }
+        finish_doc.push_str(" *\n");
+        if let Some(returns) = self.return_info.to_gtk_doc_returns() {
+            finish_doc.push_str(&format!("{}\n", returns));
+        }
+        finish_doc.push_str(" */\n");
+        finish_doc.push_str(&format!(
+            "{} {}({});\n\n",
+            return_type,
+            finish_fn_name,
+            finish_params.join(", ")
+        ));
+        result.push_str(&finish_doc);
+
+        let mut sync_params = Vec::new();
+        if let Some(self_c_type) = self.generate_self_c_type_string() {
+            sync_params.push(format!("{}* self", self_c_type));
+        }
+        for param in &self.params {
+            sync_params.push(param.to_header_param());
+        }
+        sync_params.push("GCancellable* cancellable".to_string());
+        if self.is_fallible {
+            sync_params.push("GError** error".to_string());
+        }
+
+        let mut sync_doc = format!("/**\n * {}:\n", sync_fn_name);
+        if !self.is_constructor() {
+            sync_doc.push_str(&format!(" * @self: a #{}\n", self.c_type_name));
+        }
+        for param in &self.params {
+            sync_doc.push_str(&format!(
+                "{}\n",
+                param.to_gtk_doc_annotation(&self.c_type_name.to_string())
+            ));
+        }
+        sync_doc.push_str(" * @cancellable: (nullable): a #GCancellable\n");
+        if self.is_fallible {
+            sync_doc.push_str(" * @error: (out) (optional): return location for error\n");
+        }
+        sync_doc.push_str(" *\n");
+        if let Some(returns) = self.return_info.to_gtk_doc_returns() {
+            sync_doc.push_str(&format!("{}\n", returns));
+        }
+        sync_doc.push_str(" */\n");
+        sync_doc.push_str(&format!(
+            "{} {}({});\n",
+            return_type,
+            sync_fn_name,
+            sync_params.join(", ")
+        ));
+        result.push_str(&sync_doc);
+
+        result
+    }
+
+    fn generate_self_c_type_string(&self) -> Option<String> {
+        self.self_type.as_ref()?;
+
+        if let Some(c_type) = self.ffi_type.self_c_type() {
+            Some(crate::utils::rust_type_to_c_type_string(&c_type))
+        } else {
+            Some(self.c_type_name.to_string())
         }
     }
 }

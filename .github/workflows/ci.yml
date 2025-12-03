@@ -39,9 +39,8 @@ jobs:
         run: cargo test --workspace --all-targets
 
       - name: Run C integration tests
-        run: |
-          cd tests/c_integration
-          make
+        working-directory: tests/c_integration
+        run: make
 
   clippy:
     name: Clippy

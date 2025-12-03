@@ -72,4 +72,7 @@ impl Point {
     }
 }
 
-fn main() {}
+fn main() {
+    #[allow(unused_imports)]
+    use ffi::Point;
+}

@@ -35,4 +35,7 @@ impl Calculator {
     }
 }
 
-fn main() {}
+fn main() {
+    #[allow(unused_imports)]
+    use ffi::Calculator;
+}

@@ -78,7 +78,6 @@ impl TransferMode {
     }
 }
 
-#[derive(Clone)]
 pub(crate) struct CTypeOverride {
     pub(crate) c_type: Type,
     pub(crate) transfer: TransferMode,

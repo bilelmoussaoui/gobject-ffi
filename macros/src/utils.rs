@@ -1,14 +1,10 @@
 use quote::quote;
-use syn::Type;
+use syn::{Attribute, Type, parse::Parse};
+
+use crate::types::CTypeOverride;
 
 pub fn is_unit_type(ty: &Type) -> bool {
     matches!(ty, Type::Tuple(tuple) if tuple.elems.is_empty())
-}
-
-pub fn is_unit_type_token(tokens: &proc_macro2::TokenStream) -> bool {
-    syn::parse2::<Type>(tokens.clone())
-        .map(|ty| is_unit_type(&ty))
-        .unwrap_or(false)
 }
 
 pub fn is_result_type(ty: &Type) -> bool {
@@ -53,27 +49,27 @@ pub fn extract_mut_ref_inner(ty: &Type) -> Option<&Type> {
     None
 }
 
-pub fn extract_result_ok_type(ty: &Type) -> proc_macro2::TokenStream {
+pub fn extract_result_ok_type_as_type(ty: &Type) -> Type {
     let Type::Path(type_path) = ty else {
-        return quote! { () };
+        return syn::parse_quote! { () };
     };
 
     let Some(segment) = type_path.path.segments.last() else {
-        return quote! { () };
+        return syn::parse_quote! { () };
     };
 
     if segment.ident != "Result" {
-        return quote! { () };
+        return syn::parse_quote! { () };
     }
 
     let syn::PathArguments::AngleBracketed(args) = &segment.arguments else {
-        return quote! { () };
+        return syn::parse_quote! { () };
     };
 
     if let Some(syn::GenericArgument::Type(ok_type)) = args.args.first() {
-        quote! { #ok_type }
+        ok_type.clone()
     } else {
-        quote! { () }
+        syn::parse_quote! { () }
     }
 }
 
@@ -88,4 +84,28 @@ pub fn rust_type_to_c_type(ty: &Type) -> proc_macro2::TokenStream {
     }
 
     quote! { <#ty as ::gobject_ffi::FfiConvert>::CType }
+}
+
+pub(crate) fn extract_c_return_type(attrs: &[Attribute]) -> syn::Result<Option<CTypeOverride>> {
+    extract_attribute(attrs, "c_return_type")
+}
+
+pub(crate) fn extract_c_type(attrs: &[Attribute]) -> syn::Result<Option<CTypeOverride>> {
+    extract_attribute(attrs, "c_type")
+}
+
+fn extract_attribute<T: Parse>(attrs: &[Attribute], name: &str) -> syn::Result<Option<T>> {
+    attrs
+        .iter()
+        .find(|attr| attr.path().is_ident(name))
+        .map(|attr| attr.parse_args::<T>())
+        .transpose()
+}
+
+pub(crate) fn check_fallibility(return_type: &syn::ReturnType) -> bool {
+    if let syn::ReturnType::Type(_, ty) = return_type {
+        is_result_type(ty)
+    } else {
+        false
+    }
 }

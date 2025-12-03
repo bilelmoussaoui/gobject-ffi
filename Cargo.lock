@@ -185,6 +185,7 @@ dependencies = [
  "gio",
  "glib",
  "gobject-ffi",
+ "heck",
  "proc-macro2",
  "quote",
  "syn",
